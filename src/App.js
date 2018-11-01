@@ -1,8 +1,6 @@
 import React, { Component } from "react";
 import axios from "axios";
 
-import authors from "./data.js";
-
 // Components
 import Sidebar from "./Sidebar";
 import SearchBar from "./SearchBar";
@@ -14,7 +12,9 @@ class App extends Component {
     super(props);
     this.state = {
       currentAuthor: {},
-      filteredAuthors: []
+      filteredAuthors: [],
+      authors: [],
+      loading: ""
     };
     this.selectAuthor = this.selectAuthor.bind(this);
     this.unselectAuthor = this.unselectAuthor.bind(this);
@@ -22,7 +22,11 @@ class App extends Component {
   }
 
   selectAuthor(author) {
-    this.setState({ currentAuthor: author });
+    axios
+      .get(`https://the-index-api.herokuapp.com/api/authors/${author.id}/`)
+      .then(res => res.data)
+      .then(currentAuthor => this.setState({ currentAuthor: currentAuthor }))
+      .catch(err => console.error("Failed!"));
   }
 
   unselectAuthor() {
@@ -31,7 +35,7 @@ class App extends Component {
 
   filterAuthors(query) {
     query = query.toLowerCase();
-    let filteredAuthors = authors.filter(author => {
+    let filteredAuthors = this.state.authors.filter(author => {
       return `${author.first_name} ${author.last_name}`.includes(query);
     });
     this.setState({ filteredAuthors: filteredAuthors });
@@ -48,8 +52,28 @@ class App extends Component {
         />
       );
     } else {
-      return <AuthorsList authors={authors} selectAuthor={this.selectAuthor} />;
+      return (
+        <AuthorsList
+          authors={this.state.authors}
+          selectAuthor={this.selectAuthor}
+        />
+      );
     }
+  }
+  componentDidMount() {
+    axios
+      .get("https://the-index-api.herokuapp.com/api/authors/")
+      .then(res => res.data)
+      .then(authorsFromAPI =>
+        this.setState(
+          { authors: authorsFromAPI },
+          this.setState({ loading: "" })
+        )
+      )
+      .catch(err => console.error("Failed!"));
+  }
+  componentWillMount() {
+    this.setState({ loading: "Loading" });
   }
 
   render() {
@@ -62,6 +86,7 @@ class App extends Component {
           <div className="content col-10">
             <SearchBar filterAuthors={this.filterAuthors} />
             {this.getContentView()}
+            <h1>{this.state.loading}</h1>
           </div>
         </div>
       </div>
